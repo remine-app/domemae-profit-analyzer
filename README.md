@@ -68,3 +68,27 @@ python evaluate.py --supplier output/detail_candidates_파일명.csv --market ma
 - API 인증키 및 상품 원본 데이터는 저장소 코드에 커밋하지 않습니다.
 - GitHub Actions 아티팩트는 공개 저장소에서 접근 범위가 넓을 수 있습니다. 결과물의 개인정보·거래기밀 노출을 주의하세요.
 - API 호출 정책과 서비스 약관의 트래픽 제한을 확인하고, 필요하면 요청량을 낮추세요.
+
+
+## 3단계: 기존 3,114건의 공급 위험 스크리닝 (실행 가능)
+
+**Screen latest supplier data** 워크플로를 수동으로 실행합니다.
+- `source_run`: 기존 성공 실행 ID `45018028549`
+- `shortlist`: 우선 조사 큐 수량 `80`
+- 새 도매매 호출이나 별도 키 입력은 필요하지 않습니다. 기존 Actions 아티팩트를 내려받아 오프라인에서 분석합니다.
+- 결과는 `supplier_screening.csv` (공급정보 기준 위험 분류), `market_research_queue.csv` (외부 시장 증거를 추가할 조사 대상), `screening_summary.json`입니다.
+
+**중요한 해석 제한**
+- `MARKET_CHECK`는 ‘판매 승인’이 아니라 상품 상세 조건을 얻었으며 시장 조사가 필요한 상태를 뜻합니다.
+- `REVIEW`는 공급 상세/권리/인증 검토가 필요한 상태, `HOLD`는 제한 상품 여부 확인이 필요한 상태입니다.
+- 상품명만으로 인증 의무, 불량률, 가품 여부, 실제 반품률을 확정하지 않습니다.
+- `market_research_queue.csv`의 빈 열은 사람이 확인한 동일상품 증거 URL, 시장 판매가격, 쇼핑 관심도, 판매자 수수료, 반품 충당액을 기록하기 위한 것입니다.
+- **네이버 쇼핑인사이트의 검색 클릭지수는 판매 수량이 아닙니다.** 정확한 경쟁 판매자 주문량을 만들어 넣지 마세요.
+- 현 단계에서 `contribution_profit`은 공란입니다. 실제 수익/판매 실적 데이터가 없기 때문입니다.
+- 외부 시장 가격 자동 수집은 아직 구현되지 않았습니다. 최신 공식 API/권한 및 이용약관 확인 후 연결해야 합니다.
+- 상품 실마진은 배송비, 옵션, 배송비 수취, 구매자 쿠폰, 환불 예상 손실, VAT 처리 등을 종합한 후 검증합니다.
+
+현재 시장 신호 출처 검토:
+- [NAVER API HUB 쇼핑인사이트](https://api.ncloud-docs.com/docs/naver-api-hub-shopping-insight-keywords)
+- [NAVER 쇼핑 검색 API 종료 안내](https://developers.naver.com/notice/article/32530)
+- [쿠팡 판매자 API](https://developers.coupang.com/ko)
