@@ -1,0 +1,47 @@
+name: Broad product discovery
+on:
+  workflow_dispatch:
+    inputs:
+      per_search:
+        description: "Products per keyword/order (10-200)"
+        default: "100"
+        required: true
+        type: string
+      detail_limit:
+        description: "Shortlisted products for detail review (0-100)"
+        default: "30"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run offline tests
+        run: python -m unittest discover -s tests -v
+      - name: Discover broadly and inspect details
+        env:
+          DOMEMAE_API_KEY: ${{ secrets.DOMEMAE_API_KEY }}
+          PER_SEARCH: ${{ inputs.per_search }}
+          DETAIL_LIMIT: ${{ inputs.detail_limit }}
+        run: |
+          if [ -z "$DOMEMAE_API_KEY" ]; then
+            echo "Missing DOMEMAE_API_KEY repository secret"
+            exit 1
+          fi
+          python discover.py --per-search "$PER_SEARCH" --detail-limit "$DETAIL_LIMIT" --request-cap 75
+      - name: Upload data output
+        uses: actions/upload-artifact@v4
+        with:
+          name: domemae-discovery
+          path: output/
+          if-no-files-found: error
+          retention-days: 3
