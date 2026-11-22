@@ -16,21 +16,27 @@ def request(aid,parameters):
         raise ValueError("API error or unexpected response")
     return parsed
 def records(response):
+    """API's JSON may use numbered text keys and @number metadata keys."""
     root=response.get("domeggook",response)
     values=root.get("items",{}) if isinstance(root,dict) else {}
-    if isinstance(values,dict):
-        values=values.get("item",[])
-    if isinstance(values,dict):values=[values]
-    if not isinstance(values,list):return []
-    rows=[]
-    for item in values:
-        if isinstance(item,dict):
-            rows.append({"category_name":str(item.get("name",item.get("_text",item.get("#text","")))),
-                         "category_id":str(item.get("id","")),
-                         "category_no":str(item.get("no","")),
-                         "depth":str(item.get("depth","")),
-                         "listed_count":str(item.get("itemCnt",""))})
-    return rows
+    raw=values.get("item",[]) if isinstance(values,dict) else values
+    if isinstance(raw,dict) and any(k.startswith("@") for k in raw):
+        out=[]
+        for key,value in raw.items():
+            if not str(key).isdigit():continue
+            attr=raw.get("@"+key,{})
+            if not isinstance(attr,dict):continue
+            out.append({"category_name":str(value),"category_id":str(attr.get("id","")),
+                        "category_no":str(attr.get("no","")),
+                        "depth":str(attr.get("depth","")),
+                        "listed_count":str(attr.get("itemCnt",""))})
+        return out
+    if isinstance(raw,dict):raw=[raw]
+    if not isinstance(raw,list):return []
+    return [{"category_name":str(x.get("name","")),
+             "category_id":str(x.get("id","")),"category_no":str(x.get("no","")),
+             "depth":str(x.get("depth","")),"listed_count":str(x.get("itemCnt",""))}
+            for x in raw if isinstance(x,dict)]
 def main():
     import csv
     aid=os.environ.get("DOMEMAE_API_KEY","").strip()
@@ -50,9 +56,12 @@ def main():
         with (out/"category_counts.csv").open("w",encoding="utf-8-sig",newline="") as f:
             w=csv.DictWriter(f,fieldnames=["category_name","category_id","category_no","depth","listed_count"])
             w.writeheader();w.writerows(records(category_data))
-        # Category records are public structural metadata; no credentials included.
-        (out/"category_structure_sample.json").write_text(
-            json.dumps(category_data,ensure_ascii=False,indent=2)[:350000],encoding="utf-8")
+        # Keep statistics, not a truncated or invalid JSON file.
+        category_records=records(category_data)
+        report["root_categories"]=[r for r in category_records if r["depth"]=="1"]
+        report["category_count_total"]=len(category_records)
+        report["leaf_count"]=sum(r["category_id"].endswith("_00") is False for r in category_records)
+        report["count_warning"]="Counts include parent-child hierarchy; sum only direct root categories, after confirming listing interpretation."
     except (urllib.error.HTTPError,urllib.error.URLError,TimeoutError,ValueError,KeyError) as e:
         report["getCat_error"]=type(e).__name__
         print("getCat query failed:",type(e).__name__,file=sys.stderr)
@@ -61,8 +70,8 @@ def main():
         tree=request(aid,{"ver":"1.0","mode":"getCategoryList"})
         report["getCategoryList_root_keys"]=list(tree.keys())
         report["getCategoryList_error"]="none"
-        (out/"category_tree_sample.json").write_text(
-            json.dumps(tree,ensure_ascii=False,indent=2)[:350000],encoding="utf-8")
+        # Tree is fetched only for schema verification; no giant raw artifact.
+        report["category_tree_top_keys"]=list(tree.get("domeggook",{}).get("items",{}).keys())[:10]
     except (urllib.error.HTTPError,urllib.error.URLError,TimeoutError,ValueError,KeyError) as e:
         report["getCategoryList_error"]=type(e).__name__
         print("getCategoryList failed:",type(e).__name__,file=sys.stderr)
