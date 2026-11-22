@@ -135,3 +135,24 @@ python evaluate.py --supplier output/detail_candidates_파일명.csv --market ma
 - `possible_category_mismatch` 및 `category_not_verifiable_from_title`는 사람의 재검토 대상입니다.
 - 이 단계는 법적 판매 가능성, 동일 모델/옵션 매칭, 시장 가격, 판매량, 마진을 증명하지 않습니다.
 - 이미 실행한 원본 데이터의 샘플 오분류 사례: '반려동물'에 '핸드폰 미니백' 포함.
+
+
+## 7단계: NAVER API HUB 무료 한도 내 쇼핑인사이트 연동
+
+현재 사용자가 확인한 요금표(2026-11-22)는 검색어 트렌드와 쇼핑인사이트 각각 월 0~30,000건 기본 무료, 30,001~50,000건 한시적 무료, 검색 API는 최대 775,000건 무료(하루 25,000건 한도)입니다. **한시적 무료는 영구 무료 약속이 아닙니다.** 실제 계정 청구·한도·변경 공지를 콘솔에서 다시 확인해야 합니다.
+
+### 사용자 준비
+1. NAVER Cloud Platform > Application Services > NAVER API HUB 에서 서비스 이용 신청 후 Application을 등록하고 **쇼핑 인사이트**를 선택합니다.
+2. 해당 Application의 Client ID/Client Secret을 확인하고 GitHub 저장소의 Settings > Secrets and variables > Actions에 다음 이름으로 **각각 Repository Secret**을 저장합니다:
+   - `NAVER_API_HUB_CLIENT_ID`
+   - `NAVER_API_HUB_CLIENT_SECRET`
+3. **NAVER Shopping Insight (free-only manual)** 워크플로를 실행합니다. 먼저 `execute=false`로 무료 드라이런을 실행해 카테고리 코드 및 요청 바디만 확인하세요.
+4. 해당 월 쇼핑인사이트 실제 호출량과 적용 요금이 무료 한도 이내인지 콘솔에서 확인한 다음 `execute=true`, `free_plan_confirmed=true`로 **한 번만 호출**합니다.
+
+이 프로그램은 자동 반복/크론을 걸지 않았고 1회 수동 실행당 쇼핑인사이트 요청 한 번만 전송합니다. 단, **GitHub Actions만으로 NAVER 계정 전체 누적 호출량이나 미래 과금 방지를 보장할 수 없으므로** NCP 콘솔의 사용량 및 알림 설정을 병행하세요.
+
+카테고리 코드는 네이버쇼핑 카테고리 고유 ID입니다. 도매매 자체 분류명과 혼동하면 안 됩니다.
+쇼핑인사이트는 검색 클릭 **상대지수**를 제공합니다. 실제 판매량, 제품별 매출 또는 경쟁가격으로 해석하지 마세요.
+쇼핑/책/전문자료의 종전 NAVER 개발자센터 검색 API는 2026-07-31 종료되었으므로 경쟁상품 가격 자동 조회 기능이 아닙니다.
+
+공식 문서: https://api.ncloud-docs.com/docs/naver-api-hub-shopping-insight-keywords
