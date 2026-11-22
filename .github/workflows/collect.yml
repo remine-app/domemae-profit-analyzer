@@ -1,0 +1,49 @@
+name: Collect Domemae sample
+on:
+  workflow_dispatch:
+    inputs:
+      keyword:
+        description: "Search keyword (Korean supported)"
+        required: true
+        default: "케이블 정리"
+        type: string
+      limit:
+        description: "Number of products (1-100)"
+        required: true
+        default: "30"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Collect read-only product data
+        env:
+          DOMEMAE_API_KEY: ${{ secrets.DOMEMAE_API_KEY }}
+          SEARCH_KEYWORD: ${{ inputs.keyword }}
+          PRODUCT_LIMIT: ${{ inputs.limit }}
+        shell: bash
+        run: |
+          if [ -z "$DOMEMAE_API_KEY" ]; then
+            echo "Missing DOMEMAE_API_KEY repository Actions secret"
+            exit 1
+          fi
+          python collect.py --keyword "$SEARCH_KEYWORD" --limit "$PRODUCT_LIMIT"
+      - name: Upload CSV / JSON result
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: domemae-data
+          path: output/
+          retention-days: 3
+          if-no-files-found: error
