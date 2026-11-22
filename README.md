@@ -156,3 +156,36 @@ python evaluate.py --supplier output/detail_candidates_파일명.csv --market ma
 쇼핑/책/전문자료의 종전 NAVER 개발자센터 검색 API는 2026-07-31 종료되었으므로 경쟁상품 가격 자동 조회 기능이 아닙니다.
 
 공식 문서: https://api.ncloud-docs.com/docs/naver-api-hub-shopping-insight-keywords
+
+
+## 8단계: 증거 기반 동일상품 매칭 엔진 (v1)
+
+`matching_engine.py`는 **공급처 이름이나 상품명 비슷함만으로 동일 상품 또는 수익이 검증됐다고 판정하지 않습니다.**
+
+### 공급 데이터 추가
+- 기본: 도매매 `catalog_*.csv`의 상세 데이터가 확인된 가격만 표준화합니다. 목록 가격은 실원가로 승격하지 않습니다.
+- 타 공급처는 해당 업체의 **정식 API 또는 허용된 CSV 파일**을 사용해야 합니다. `--supplier-csv authorized_ownerclan.csv`처럼 입력할 수 있으며, 별도 계약이나 토큰 없이 타 플랫폼 데이터에 접근하지 않습니다.
+- 표준 공급 필드: `source,source_id,title,brand,model,gtin,option,quantity,supply_price,shipping_fee,min_order,stock,active,rights_verified,compliance_verified,return_policy_verified,fulfillment_sla_verified,supplier_url,seller_id,observed_at`
+- 오너클랜은 정식 GraphQL 상품/변경 이력 API를 제공하지만, 이 저장소에서 아직 실서비스 연동 및 권한 테스트를 하지 않았습니다.
+- **정확한 공급비용**에는 옵션 가격, 최소구매수량, 주문 부대비용이 반영돼야 합니다.
+
+### 시장 데이터 연결
+- 정상적으로 이용 허가된 시장 API, 서면 허용된 데이터 피드 또는 수동으로 확인한 공개 판매페이지의 상품정보를 `market_observation_template.csv` 스키마로 기록합니다.
+- `market_title`은 탐색용이고 정확성 증거가 아닙니다.
+- `market_gtin` 일치 **또는** 제조사·모델 일치와 **동일한 옵션/수량**이 있을 때만 `EXACT_CANDIDATE`라고 판정합니다. 최종 동일상품 승인에는 사람 검토가 더 필요합니다.
+- 옵션이 없거나, 모델/바코드가 달라지거나, 상품명만 비슷하면 `REVIEW` / `SIMILAR` / `CONFLICT`로 제한합니다.
+- 시장경쟁가, 배송비, 수수료, 광고비, 반품비, 적법성 근거가 완전하지 않으면 `verified_contribution`은 **항상 공란**입니다.
+- 데이터 소스의 이용범위·저장·보존 허용 여부를 먼저 확인하세요.
+- 무단 쿠팡 크롤링·차단 우회 코드는 사용하지 않습니다.
+
+### 실행
+GitHub Actions → **Offline supplier-market matching gate** → Run workflow.
+기존 도매매 수집 실행 ID `45018028549`가 기본값입니다. 최초 병합 시 오프라인 감사 1회가 자동 실행됩니다.
+파일: `normalized_suppliers.csv`, `market_observation_template.csv`, `match_review.csv`, `matching_summary.json`.
+
+로컬:
+```bash
+python matching_engine.py --domemae-catalog input/catalog_*.csv --supplier-csv authorized_ownerclan.csv --market-observations authorized_market.csv
+```
+
+**데이터 확보 원칙:** 상품수 기준 대량 등록 금지. 상품군의 지속적 관심, 동일 상품 경쟁가격, 공급자격, 배송, 반품, 법규, 주문당 공헌이익을 검증한 후 5~10개 후보로 소액 실험.
