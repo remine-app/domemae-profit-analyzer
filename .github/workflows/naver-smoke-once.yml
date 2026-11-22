@@ -1,0 +1,32 @@
+name: One-time NAVER API HUB connection check
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/naver-smoke-20261122.txt'
+permissions:
+  contents: read
+jobs:
+  connect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate payload offline
+        run: python -m unittest discover -s tests -v
+      - name: Call Shopping Insight exactly once
+        env:
+          NAVER_API_HUB_CLIENT_ID: ${{ secrets.NAVER_API_HUB_CLIENT_ID }}
+          NAVER_API_HUB_CLIENT_SECRET: ${{ secrets.NAVER_API_HUB_CLIENT_SECRET }}
+        run: python naver_smoke_once.py
+      - name: Upload diagnostic result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: naver-connection-smoke
+          path: output/naver_smoke/
+          retention-days: 3
+          if-no-files-found: ignore
