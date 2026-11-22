@@ -18,7 +18,10 @@ REVIEW_WORDS=("배터리","충전기","영유아","어린이","의료","건강�
 COLUMNS=("category keyword no title price unitQty sellerId deliveryWho deliveryFee deliveryAdd "
 "fromOversea adultOnly supplyActive url flags screen_score details_status supply_price_1 "
 "supply_price_rule inventory supply_unit resale_min shipping_type shipping_fee shipping_rule "
-"merge_delivery shipping_days image_license seller_reviews tax_status detail_status "
+"merge_delivery shipping_days image_license seller_reviews seller_satisfaction seller_good tax_status detail_status "
+"native_popular_code native_popular_name native_price_min native_price_max native_price_sole native_price_supply_lowest "
+"return_shipping_fee return_shipping_double actual_category model manufacturer certification_flag "
+"native_price_status "
 "market_sale_price market_shipping_collected platform_fee_pct other_cost contribution_profit profit_status").split()
 
 def number(v):
@@ -97,7 +100,23 @@ def detail_values(obj):
       "image_license":nested(obj,"desc","license","usable"),
       "seller_reviews":number(nested(obj,"seller","score","cnt")),
       "tax_status":str(nested(obj,"basis","tax") or ""),
-      "detail_status":str(nested(obj,"basis","status") or "")
+      "detail_status":str(nested(obj,"basis","status") or ""),
+      "seller_satisfaction":number(nested(obj,"seller","score","avg")),
+      "seller_good":str(nested(obj,"seller","good") if nested(obj,"seller","good") is not None else ""),
+      "native_popular_code":str(nested(obj,"popular","code") or ""),
+      "native_popular_name":str(nested(obj,"popular","name") or ""),
+      "native_price_min":number(nested(obj,"priceCompare","min")),
+      "native_price_max":number(nested(obj,"priceCompare","max")),
+      "native_price_sole":str(nested(obj,"priceCompare","sole") if nested(obj,"priceCompare","sole") is not None else ""),
+      "native_price_supply_lowest":str(nested(obj,"priceCompare","supply") if nested(obj,"priceCompare","supply") is not None else ""),
+      "return_shipping_fee":number(nested(obj,"return","deliAmt")),
+      "return_shipping_double":str(nested(obj,"return","deliAmtDouble") if nested(obj,"return","deliAmtDouble") is not None else ""),
+      "actual_category":str(nested(obj,"category","current","name") or ""),
+      "model":str(nested(obj,"detail","model") or ""),
+      "manufacturer":str(nested(obj,"detail","manufacturer") or ""),
+      "certification_flag":str(nested(obj,"detail","safetyCert","cert") or ""),
+      "native_price_status":"supplier_platform_price_comparison_not_verified_retail" if nested(obj,"priceCompare") else "no_supplier_price_comparison"
+
     }
 
 def round_robin(rows,limit):
