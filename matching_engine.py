@@ -148,10 +148,17 @@ def main():
     p=argparse.ArgumentParser()
     p.add_argument("--domemae-catalog",required=True)
     p.add_argument("--market-observations",help="Allowed/sourced market observations CSV")
+    p.add_argument("--supplier-csv",action="append",default=[],help="Authorized normalized supplier data CSV; repeat for multiple suppliers")
     p.add_argument("--output",default="output/matching")
     a=p.parse_args()
     out=Path(a.output);out.mkdir(parents=True,exist_ok=True)
     suppliers=dome_to_standard(csv_read(a.domemae_catalog))
+    for supplier_path in a.supplier_csv:
+        for item in csv_read(supplier_path):
+            if not item.get("source") or not item.get("source_id"):
+                raise ValueError("supplier CSV must include source and source_id")
+            suppliers.append({key:item.get(key,"") for key in SUPPLY_COLS})
+    suppliers=list({(r["source"],r["source_id"]):r for r in suppliers}.values())
     csv_write(out/"normalized_suppliers.csv",suppliers,SUPPLY_COLS)
     if a.market_observations:
         markets=csv_read(a.market_observations)
