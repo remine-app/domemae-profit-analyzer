@@ -1,0 +1,42 @@
+name: Domemae strict pilot (100 detail items)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/domemae-pilot-20261122.txt'
+  workflow_dispatch:
+    inputs:
+      details:
+        description: "Max detail requests (1-120), recommended 100"
+        default: "100"
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Offline unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Read-only strict-filter discovery
+        env:
+          DOMEMAE_API_KEY: ${{ secrets.DOMEMAE_API_KEY }}
+          DETAILS: ${{ inputs.details || '100' }}
+        run: |
+          set -euo pipefail
+          test -n "$DOMEMAE_API_KEY"
+          python pilot_domemae.py --details "$DETAILS" --per-search 80
+      - name: Upload pilot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: domemae-native-competitiveness-pilot
+          path: output/pilot/
+          retention-days: 3
+          if-no-files-found: ignore
