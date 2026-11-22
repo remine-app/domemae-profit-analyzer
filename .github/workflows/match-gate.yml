@@ -1,0 +1,48 @@
+name: Offline supplier-market matching gate
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/match-gate-20261122.txt'
+  workflow_dispatch:
+    inputs:
+      discovery_run:
+        description: "Successful Domemae Broad product discovery run ID"
+        required: true
+        default: "45018028549"
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  match:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run all offline regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Download authorized Domemae API dataset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.discovery_run || '45018028549' }}
+        run: |
+          set -euo pipefail
+          mkdir -p input
+          gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" -n domemae-discovery -D input
+      - name: Run evidence-gated normalization and matching
+        run: |
+          set -euo pipefail
+          catalog="$(find input -maxdepth 2 -name 'catalog_*.csv' | head -1)"
+          test -n "$catalog"
+          python matching_engine.py --domemae-catalog "$catalog"
+      - name: Upload suppliers + evidence template
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-matching-evidence
+          path: output/matching/
+          retention-days: 3
+          if-no-files-found: error
