@@ -1,0 +1,38 @@
+name: One-time whole Domemae midcategory screen
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/domemae-all-midcategories-20261122.txt'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run offline tests
+        run: python -m unittest discover -s tests -v
+      - name: Download official getCat category structure
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p input
+          gh run download 45030376762 -R "$GITHUB_REPOSITORY" -n domemae-full-category-census -D input
+      - name: Probe every mid-level category using only supply read API
+        env:
+          DOMEMAE_API_KEY: ${{ secrets.DOMEMAE_API_KEY }}
+        run: python probe_all_midcategories.py --census input/category_counts.csv
+      - name: Upload all category results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: whole-market-midcategory-screen
+          path: output/whole_market/
+          retention-days: 3
+          if-no-files-found: ignore
