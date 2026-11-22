@@ -1,0 +1,38 @@
+name: Prepare Naver and Coupang comparison
+on:
+  workflow_dispatch:
+    inputs:
+      screening_run:
+        description: "Successful Screen latest supplier data workflow run ID"
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Test market comparison
+        run: python -m unittest discover -s tests -v
+      - name: Download screened supplier queue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.screening_run }}
+        run: |
+          mkdir -p input
+          gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" -n supplier-screening -D input
+      - name: Prepare two-platform template
+        run: |
+          python compare_markets.py --queue input/market_research_queue.csv
+      - name: Upload observation template
+        uses: actions/upload-artifact@v4
+        with:
+          name: dual-platform-observation-template
+          path: output/market/
+          retention-days: 3
