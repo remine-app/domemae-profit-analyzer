@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'config/domemae-category-census-20261122.txt'
+      - 'config/domemae-category-census-repaired-20261122.txt'
 permissions:
   contents: read
 jobs:
