@@ -1,0 +1,72 @@
+"""Read-only total category census; no keywords, no sales/return/margin claims.
+Official GET getCat v2.0 market=domeme; getCategoryList v1.0. Two requests.
+"""
+import json,os,sys,urllib.parse,urllib.request,urllib.error
+from pathlib import Path
+from datetime import datetime,timezone
+ENDPOINT="https://www.domeggook.com/ssl/api/"
+def request(aid,parameters):
+    query=urllib.parse.urlencode({"aid":aid,"om":"json",**parameters})
+    req=urllib.request.Request(ENDPOINT+"?"+query,headers={"User-Agent":"DomemaeProfitAnalyzer/0.9"})
+    with urllib.request.urlopen(req,timeout=40) as response:
+        raw=response.read(10000000)
+    parsed=json.loads(raw.decode("utf-8-sig"))
+    # Reject unexpected API errors; do not log request URLs containing API key.
+    if not isinstance(parsed,dict) or parsed.get("error") or parsed.get("errors"):
+        raise ValueError("API error or unexpected response")
+    return parsed
+def records(response):
+    root=response.get("domeggook",response)
+    values=root.get("items",{}) if isinstance(root,dict) else {}
+    if isinstance(values,dict):
+        values=values.get("item",[])
+    if isinstance(values,dict):values=[values]
+    if not isinstance(values,list):return []
+    rows=[]
+    for item in values:
+        if isinstance(item,dict):
+            rows.append({"category_name":str(item.get("name",item.get("_text",item.get("#text","")))),
+                         "category_id":str(item.get("id","")),
+                         "category_no":str(item.get("no","")),
+                         "depth":str(item.get("depth","")),
+                         "listed_count":str(item.get("itemCnt",""))})
+    return rows
+def main():
+    import csv
+    aid=os.environ.get("DOMEMAE_API_KEY","").strip()
+    if not aid:
+        print("Missing DOMEMAE_API_KEY")
+        return 2
+    out=Path("output/census");out.mkdir(parents=True,exist_ok=True)
+    report={"market":"domeme","calls_attempted":0,"timestamp_utc":datetime.now(timezone.utc).isoformat(),
+            "note":"Category counts may be hierarchical and must not be summed across parent and child categories."}
+    try:
+        report["calls_attempted"]+=1
+        category_data=request(aid,{"ver":"2.0","mode":"getCat","market":"domeme"})
+        report["getCat_root_keys"]=list(category_data.keys())
+        report["getCat_rows"]=len(records(category_data))
+        report["getCat_error"]="none"
+        import csv
+        with (out/"category_counts.csv").open("w",encoding="utf-8-sig",newline="") as f:
+            w=csv.DictWriter(f,fieldnames=["category_name","category_id","category_no","depth","listed_count"])
+            w.writeheader();w.writerows(records(category_data))
+        # Category records are public structural metadata; no credentials included.
+        (out/"category_structure_sample.json").write_text(
+            json.dumps(category_data,ensure_ascii=False,indent=2)[:350000],encoding="utf-8")
+    except (urllib.error.HTTPError,urllib.error.URLError,TimeoutError,ValueError,KeyError) as e:
+        report["getCat_error"]=type(e).__name__
+        print("getCat query failed:",type(e).__name__,file=sys.stderr)
+    try:
+        report["calls_attempted"]+=1
+        tree=request(aid,{"ver":"1.0","mode":"getCategoryList"})
+        report["getCategoryList_root_keys"]=list(tree.keys())
+        report["getCategoryList_error"]="none"
+        (out/"category_tree_sample.json").write_text(
+            json.dumps(tree,ensure_ascii=False,indent=2)[:350000],encoding="utf-8")
+    except (urllib.error.HTTPError,urllib.error.URLError,TimeoutError,ValueError,KeyError) as e:
+        report["getCategoryList_error"]=type(e).__name__
+        print("getCategoryList failed:",type(e).__name__,file=sys.stderr)
+    (out/"census_summary.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
+    print(json.dumps(report,ensure_ascii=False))
+    return 0 if report.get("getCat_error")=="none" else 1
+if __name__=="__main__":raise SystemExit(main())
