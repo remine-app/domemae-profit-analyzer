@@ -1,0 +1,52 @@
+name: Prepare no-account market research queue
+on:
+  workflow_dispatch:
+    inputs:
+      discovery_run:
+        description: "Successful Broad product discovery run ID"
+        required: true
+        default: "45018028549"
+        type: string
+      candidates:
+        description: "Candidate products from detail-verified list"
+        default: "25"
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Download verified supplier discovery data
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.discovery_run }}
+        run: |
+          mkdir -p input
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" -n domemae-discovery -D input
+      - name: Build manual two-platform research queue
+        env:
+          CANDIDATES: ${{ inputs.candidates }}
+        run: |
+          set -euo pipefail
+          catalog="$(find input -maxdepth 2 -name 'catalog_*.csv' | head -n 1)"
+          details="$(find input -maxdepth 2 -name 'detail_candidates_*.csv' | head -n 1)"
+          test -n "$catalog"
+          test -n "$details"
+          python prepare_market_research.py --catalog "$catalog" --details "$details" --limit "$CANDIDATES"
+      - name: Upload comparison worksheet
+        uses: actions/upload-artifact@v4
+        with:
+          name: no-account-market-research
+          path: output/research/
+          retention-days: 3
+          if-no-files-found: error
