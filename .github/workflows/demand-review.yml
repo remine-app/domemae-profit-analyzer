@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'config/demand-review-20261122.txt'
+      - 'config/demand-review-corrected-20261122.txt'
   workflow_dispatch:
 permissions:
   contents: read
