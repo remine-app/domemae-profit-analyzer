@@ -247,3 +247,15 @@ python matching_engine.py --domemae-catalog input/catalog_*.csv --supplier-csv a
 - 손익 예측이나 A등급 판매 승인은 수행하지 않습니다. 소비자 가격, 옵션, 수수료, 반품손실 등 실제 외부 근거가 없기 때문입니다.
 - **Domemae strict pilot (100 detail items)** Actions 워크플로는 첫 배포시 1회 자동 시작되고, 이후 원하는 경우 수동 실행 가능합니다.
 - 이 소규모 실험 이후에만 호출량/키워드를 단계적으로 확대합니다.
+
+
+## 12단계: 도매매 파일럿 × NAVER 쇼핑인사이트 증거 연결
+
+`audit_pilot_market.py`는 이미 수집에 성공한 도매매 엄격필터 57개 상세와 NAVER API HUB 두 분야 트렌드 결과를 **추가 외부 호출 없이** 연결합니다.
+
+- 도매매 `priceCompare.min` 대비 공급가+고정배송비의 차이인 `indicative_room_before_fees`는 **예비 가격 여유**일 뿐 현재 소매 경쟁가격·공헌이익을 의미하지 않습니다.
+- `수량별비례` 등 비정형 배송비에는 정확한 1개 주문 배송비가 확인되지 않아 계산을 보류합니다.
+- NAVER 데이터는 수납함·욕실·청소·세탁 검색어별 상대 클릭지수 관측 횟수만 표시합니다. 소비자 판매량, 실제 전환율, 상품 단위 수요를 전혀 주장하지 않습니다.
+- `PRICE_CHECK_FIRST`는 시장 실제 동일 SKU/옵션 경쟁가를 **우선 검증할 가치가 있는 후보**라는 뜻이지 판매 승인/A등급이 아닙니다.
+- 모든 상품은 KC·이미지권리·실제 모델/옵션·반품·마켓 수수료·순수익 검증이 필요합니다.
+- Actions의 `Review Domemae pilot with Naver demand`를 통해 `product_due_diligence_queue.csv`를 생성합니다.
