@@ -1,0 +1,61 @@
+name: NAVER Shopping Insight (free-only manual)
+on:
+  workflow_dispatch:
+    inputs:
+      category_code:
+        description: "Verified Naver Shopping category ID (numeric)"
+        required: true
+        type: string
+      keyword:
+        description: "One generic product keyword (not a product title)"
+        required: true
+        type: string
+      execute:
+        description: "Call API once? false = free offline preview"
+        required: true
+        default: false
+        type: boolean
+      free_plan_confirmed:
+        description: "I checked my NCP console: current Shopping Insight 0 KRW, usage under free allowance"
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: read
+jobs:
+  insight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run offline tests
+        run: python -m unittest discover -s tests -v
+      - name: Validate consent and execute at most one call
+        env:
+          NAVER_API_HUB_CLIENT_ID: ${{ secrets.NAVER_API_HUB_CLIENT_ID }}
+          NAVER_API_HUB_CLIENT_SECRET: ${{ secrets.NAVER_API_HUB_CLIENT_SECRET }}
+          NAVER_FREE_ONLY_ACK: ${{ inputs.free_plan_confirmed && 'YES' || 'NO' }}
+          CATEGORY_CODE: ${{ inputs.category_code }}
+          KEYWORD: ${{ inputs.keyword }}
+          EXECUTE: ${{ inputs.execute }}
+        run: |
+          set -euo pipefail
+          if [ "$EXECUTE" = "true" ]; then
+            if [ "$NAVER_FREE_ONLY_ACK" != "YES" ]; then
+              echo "Confirm current 0-KRW usage plan in NCP console before running."
+              exit 1
+            fi
+            python naver_insight.py --category "$CATEGORY_CODE" --keyword "$KEYWORD" --days 28 --execute
+          else
+            python naver_insight.py --category "$CATEGORY_CODE" --keyword "$KEYWORD" --days 28
+          fi
+      - name: Upload limited insight output
+        uses: actions/upload-artifact@v4
+        with:
+          name: naver-shopping-insight
+          path: output/naver/
+          retention-days: 3
+          if-no-files-found: error
