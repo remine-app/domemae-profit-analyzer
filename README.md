@@ -92,3 +92,20 @@ python evaluate.py --supplier output/detail_candidates_파일명.csv --market ma
 - [NAVER API HUB 쇼핑인사이트](https://api.ncloud-docs.com/docs/naver-api-hub-shopping-insight-keywords)
 - [NAVER 쇼핑 검색 API 종료 안내](https://developers.naver.com/notice/article/32530)
 - [쿠팡 판매자 API](https://developers.coupang.com/ko)
+
+
+## 4단계: 네이버·쿠팡 양쪽 시장 비교
+
+- **Screen latest supplier data**를 먼저 실행해 `market_research_queue.csv`를 생성합니다.
+- **Prepare Naver and Coupang comparison**에서 위 스크리닝 실행번호를 `screening_run`에 입력합니다.
+- 결과 `market_observation_template.csv`에 네이버/쿠팡 동일 모델·옵션의 URL, 가격과 배송비, 정확한 수수료, 광고/반품충당 비용, 관측일, 수요 근거를 직접 검증해 채웁니다.
+- 이 표는 **공식·허용 데이터 출처가 확인되기 전에는 자동으로 가격이나 판매량을 채우지 않습니다.**
+- 로컬에서 `python compare_markets.py --queue market_research_queue.csv --observations market_observation_template.csv`를 실행해 비교 파일을 만듭니다.
+- `match_status=exact_verified` + `match_evidence`(같은 모델/옵션 증거), `compliance_status=verified` + 모든 비용 + 가격근거 URL + 수요 출처·기간이 있어야 잠정 공헌이익을 계산합니다.
+- 네이버·쿠팡의 수수료는 **임의의 고정 비율을 적용하지 않습니다.** 실제 판매자 계정/카테고리별 정보를 직접 입력합니다. payment_fee_pct는 marketplace_fee_pct와 중복 계상하지 않아야 합니다.
+- `demand_type=click_trend`는 클릭 추세일 뿐 판매량이 아닙니다. 관측 기간/출처를 보존하고, 외부 판매자의 정확한 주문 수를 추정해 확정치로 기재하지 않습니다.
+- 비교 결과 `PROVISIONAL_COMPARE`도 즉시 판매를 승인한 상태가 아닙니다. 부가세·정산·반품 책임·운전자금 확인이 필요합니다.
+
+공식 참고: [네이버 API HUB](https://guide.ncloud-docs.com/docs/apihub-use), [네이버 스마트스토어 수수료](https://help.sell.smartstore.naver.com/faq/content.help?faqId=15759), [쿠팡 입점 FAQ](https://marketplace.coupang.com/faq).
+
+**사용자 필요 정보:** 실제 판매 예정 플랫폼(네이버/쿠팡 모두 비교), 판매자 계정이 생기면 카테고리별 적용 수수료, API HUB 계정·허용 데이터 범위, 필요 시 실제 경쟁상품 근거. API 키를 공개 저장소/채팅에 붙이지 마세요.
