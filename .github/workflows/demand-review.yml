@@ -1,0 +1,36 @@
+name: Review Domemae pilot with Naver demand
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/demand-review-20261122.txt'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Offline tests
+        run: python -m unittest discover -s tests -v
+      - name: Retrieve both pre-existing verified result artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p input/domemae input/naver
+          gh run download 45025677696 -R "$GITHUB_REPOSITORY" -n domemae-native-competitiveness-pilot -D input/domemae
+          gh run download 45023299357 -R "$GITHUB_REPOSITORY" -n naver-demand-pilot -D input/naver
+      - name: Link only category-level trend evidence
+        run: python audit_pilot_market.py --candidates input/domemae/candidates_detail.csv --naver input/naver/pilot_results.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: domemae-demand-review
+          path: output/review/
+          retention-days: 3
+          if-no-files-found: error
