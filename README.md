@@ -189,3 +189,28 @@ python matching_engine.py --domemae-catalog input/catalog_*.csv --supplier-csv a
 ```
 
 **데이터 확보 원칙:** 상품수 기준 대량 등록 금지. 상품군의 지속적 관심, 동일 상품 경쟁가격, 공급자격, 배송, 반품, 법규, 주문당 공헌이익을 검증한 후 5~10개 후보로 소액 실험.
+
+
+## 9단계: 오너클랜 Seller API 매뉴얼 기반 읽기 전용 어댑터
+
+근거: 사용자가 제공한 Seller Manual v0.11.0 (2020-10-21), Product Notification Guide, 현재 [공식 오너클랜 API](https://www.ownerclan.com/V2/service/api-center-item.php).
+
+- `ownerclan_adapter.py`는 **기본값이 드라이런**이며 오너클랜 계정 없이 요청 스키마만 만들어 봅니다.
+- Seller API 권한이 승인되고 **상품조회/개인용 분석/자료 저장의 허용 범위가 확인**되면 GitHub Secrets에 `OWNERCLAN_SELLER_ID` 와 `OWNERCLAN_SELLER_PASSWORD` 등록, Repository variable `OWNERCLAN_API_APPROVED=YES` 설정 후 `execute=true` 사용.
+- 실제 실행은 오너클랜 상품검색 GraphQL 최대 **20건 한 번**으로 제한. 절대 상품등록/주문 생성 없음.
+- 정규화 출력: `ownerclan_suppliers.csv`. 한 상품의 옵션별 가격은 **차액이 아닌 최종 옵션 가격**임을 반영하며 SKU 단위로 분리합니다.
+- `active`는 판매중 및 오픈마켓 판매가능 여부를 함께 확인. 반환된 `returnable`은 공급처 정책이지 소비자 법률상 청약철회 제한을 증명하지 않습니다.
+- 인증/이미지 권리/반품 책임/구매 한도/옵션 재고·묶음배송은 아직 검증 안 됐으므로 `*_verified` 필드들은 비워 둡니다.
+- 표준 출력은 기존 `matching_engine.py --supplier-csv ...`에서 입력 가능합니다.
+- **실서버 인증과 최신 GraphQL 스키마는 아직 테스트하지 않았습니다.** API 문서 버전이 오래되므로 첫 결과에 스키마 오류가 나면 수정해야 합니다.
+- Vendor API는 공급사 전용, Partner API는 별도 파트너 승인/키가 필요한 타 계정 관리용입니다. Seller 조회용과 혼용하지 않습니다.
+
+### 시장 데이터 API 조사 (2026-11-22)
+- [옥션 Open API](https://developer.auction.co.kr/)는 상품검색 공식 지원, 별도 API 개발자 계정/인증티켓, SOAP 서비스. **신규 계정으로 외부 경쟁상품 검색·저장 권한이 있는지는 계정/최신 이용약관 확인 후 연동**.
+- [11번가 Open API](https://openapi.11st.co.kr/)의 고객용 상품 API는 공식 2023 기술자료에 존재하지만 현재 신규 계정의 상품검색 권한/재사용 조건 미확인.
+- [G마켓/옥션 ESM Trading API](https://etapi.gmarket.com/)는 판매자 자신의 상품 등록/조회용이지 전체 경쟁상품 검색 데이터라고 보지 않음.
+- [Kakao Shopping API](https://shopping-developers.kakao.com/)는 제한된 파트너/판매자용. 무차별 경쟁상품 조회 기반으로 선택하지 않음.
+- [쿠팡 파트너스 API](https://partners.coupang.com/)의 검색은 **최종 승인 조건 및 이용목적/검색 한도가 있으므로** 별도 검토. 수집 데이터의 재판매/경쟁분석 재사용을 자동 허용한다고 가정하지 않음.
+- 네이버 검색 API의 무료 검색 쿼터는 쇼핑상품 API를 의미하지 않음(2026-07-31 쇼핑검색 종료).
+
+우선 데이터 정규화 → 정확 모델·옵션 매칭 → 소량 시장가격/수요 검증 → 반품·CS 위험 및 공헌이익 필터를 실시합니다.

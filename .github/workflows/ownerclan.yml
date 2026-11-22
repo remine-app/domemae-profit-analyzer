@@ -1,0 +1,49 @@
+name: Ownerclan Seller API dry-run
+on:
+  workflow_dispatch:
+    inputs:
+      keyword:
+        description: "Search keyword"
+        required: true
+        default: "수납함"
+        type: string
+      execute:
+        description: "Use actual Ownerclan Seller credentials and call API? Default NO"
+        default: false
+        required: true
+        type: boolean
+permissions:
+  contents: read
+jobs:
+  ownerclan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run offline regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Build query or execute one API call
+        env:
+          SEARCH_TERM: ${{ inputs.keyword }}
+          EXECUTE: ${{ inputs.execute }}
+          OWNERCLAN_SELLER_ID: ${{ secrets.OWNERCLAN_SELLER_ID }}
+          OWNERCLAN_SELLER_PASSWORD: ${{ secrets.OWNERCLAN_SELLER_PASSWORD }}
+          OWNERCLAN_API_APPROVED: ${{ vars.OWNERCLAN_API_APPROVED }}
+        run: |
+          set -euo pipefail
+          if [ "$EXECUTE" = "true" ]; then
+            python ownerclan_adapter.py --keyword "$SEARCH_TERM" --limit 20 --execute
+          else
+            python ownerclan_adapter.py --keyword "$SEARCH_TERM" --limit 20
+          fi
+      - name: Upload redacted normalized data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ownerclan-sample
+          path: output/ownerclan/
+          retention-days: 3
+          if-no-files-found: ignore
