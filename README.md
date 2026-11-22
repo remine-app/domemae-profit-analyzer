@@ -109,3 +109,20 @@ python evaluate.py --supplier output/detail_candidates_파일명.csv --market ma
 공식 참고: [네이버 API HUB](https://guide.ncloud-docs.com/docs/apihub-use), [네이버 스마트스토어 수수료](https://help.sell.smartstore.naver.com/faq/content.help?faqId=15759), [쿠팡 입점 FAQ](https://marketplace.coupang.com/faq).
 
 **사용자 필요 정보:** 실제 판매 예정 플랫폼(네이버/쿠팡 모두 비교), 판매자 계정이 생기면 카테고리별 적용 수수료, API HUB 계정·허용 데이터 범위, 필요 시 실제 경쟁상품 근거. API 키를 공개 저장소/채팅에 붙이지 마세요.
+
+
+## 5단계: 판매자·NAVER API HUB 계정 없이 진행하는 비교 조사
+
+기존 **Broad product discovery** 성공 실행번호(`45018028549`)를 재사용하여 **Prepare no-account market research queue**를 수동 실행합니다.
+
+- 기본값: `discovery_run=45018028549`, `candidates=25`
+- 이전 결과의 상세 조회 완료 상품 중 기본 공급조건과 위험 키워드 검토를 통과한 후보를 분야별로 분산 선별합니다.
+- 각 상품에 대해 네이버와 쿠팡 **검색 페이지를 여는 URL**을 생성합니다. URL은 검색 편의용이며, 일치 상품이나 경쟁가격의 존재를 보증하지 않습니다.
+- 파일: `market_research_queue.csv`, `summary.json`
+- 표의 경쟁 상품 URL·동일 모델/옵션 여부·가격·배송비·수수료·관측일·수요 근거는 모두 비어 있습니다. **외부 시장 데이터 수집 완료라는 의미가 아닙니다.**
+- 가격, 반품률, 주문량 등을 임의 추정하지 않습니다. 인증 및 재판매/이미지 권리는 실제 판매 전 확인해야 합니다.
+- 이 프로세스는 웹사이트를 자동 스크래핑하지 않으며 판매자 계정이나 NAVER API HUB 인증키가 필요하지 않습니다.
+
+다음 단계로 네이버 쇼핑인사이트 API HUB를 연결할 때에는 서비스 신청 여부, 무료 사용 범위, 현재 요금 및 호출 제한을 반드시 공식 콘솔에서 확인한 뒤 적용합니다. 쇼핑 클릭지수는 판매건수와 다릅니다.
+
+`compare_markets.py`의 비교 엔진은 실제로 확인한 데이터가 양쪽 시장에 입력될 때만 작동합니다. 빈 템플릿으로는 수익성 판정을 하지 않습니다.
