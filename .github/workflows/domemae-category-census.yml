@@ -1,0 +1,31 @@
+name: One-time Domemae full category census
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/domemae-category-census-20261122.txt'
+permissions:
+  contents: read
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run existing offline tests
+        run: python -m unittest discover -s tests -v
+      - name: Fetch total Domemae categories and count metadata
+        env:
+          DOMEMAE_API_KEY: ${{ secrets.DOMEMAE_API_KEY }}
+        run: python census_categories.py
+      - name: Upload category structure and counts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: domemae-full-category-census
+          path: output/census/
+          retention-days: 3
+          if-no-files-found: ignore
