@@ -214,3 +214,19 @@ python matching_engine.py --domemae-catalog input/catalog_*.csv --supplier-csv a
 - 네이버 검색 API의 무료 검색 쿼터는 쇼핑상품 API를 의미하지 않음(2026-07-31 쇼핑검색 종료).
 
 우선 데이터 정규화 → 정확 모델·옵션 매칭 → 소량 시장가격/수요 검증 → 반품·CS 위험 및 공헌이익 필터를 실시합니다.
+
+
+## 10단계: 도매매 자체 시장 경쟁력 신호 활용
+
+2026-11-22 기준 공식 [상품상세 API](https://docs.channel.io/domeggook_api/ko/articles/933abc24)에서 확인한 고유 정보:
+- `popular.code/name`: 도매매/도매꾹 **내부** 인기상품 분류. 소비자 판매량으로 오인 금지.
+- `priceCompare.min/max/sole/supply`: 도매매 플랫폼이 확인한 외부 동일상품 가격 비교 및 도매매 최저가 여부. 비교 시점, 동일 옵션/수량, 포함 배송비, 실제 현재 경쟁가 여부는 API 필드만으로 확정할 수 없음.
+- `seller.score.avg/cnt`, `seller.good`: 공급자 평판(최근 180일 구매후기 기반), 특정 상품 반품률 아님.
+- `return.deliAmt/deliAmtDouble`: 공급처 표시 반품배송비 및 무료배송 주문의 2배 적용 여부. 소비자 보호법상 청약철회 권리는 별도 검토.
+- `category.current.name`, `detail.model/manufacturer/safetyCert.cert`: 실제 공급 카테고리, 동일상품 후보, 인증 표시.
+
+상품목록 API `getItemList`에 `ha`(내부 인기), `sgd`(우수판매자), `fdl`(빠른배송), `lwp`(가격비교 확인) 및 `dfos=false`(해외직배송 제외) 검색필터도 제공됨. 목록 지표와 실제 소비자 수요는 구분할 것.
+
+`discover.py`의 상세 CSV에 위 핵심 원천 필드를 추가했으며, **기존 수집 아티팩트에는 소급 적용되지 않습니다.** 재조회가 필요하며 그 전에는 수치를 보유했다고 주장할 수 없습니다.
+
+옥션 공식 Open API는 SOAP 상품검색 기능을 안내하지만 개발자 계정/앱 ID/인증티켓이 필요함. API 상품가격 데이터의 경쟁분석 목적 재사용 허용·호출당 요금·정확한 무료 한도는 이번 공개 문서 조사에서 확인되지 않았으므로 가입·실연동 전 확인할 것.
