@@ -126,3 +126,12 @@ python evaluate.py --supplier output/detail_candidates_파일명.csv --market ma
 다음 단계로 네이버 쇼핑인사이트 API HUB를 연결할 때에는 서비스 신청 여부, 무료 사용 범위, 현재 요금 및 호출 제한을 반드시 공식 콘솔에서 확인한 뒤 적용합니다. 쇼핑 클릭지수는 판매건수와 다릅니다.
 
 `compare_markets.py`의 비교 엔진은 실제로 확인한 데이터가 양쪽 시장에 입력될 때만 작동합니다. 빈 템플릿으로는 수익성 판정을 하지 않습니다.
+
+
+## 6단계: 1차 후보의 카테고리 오류 점검
+- **Audit market research queue**를 수동 실행하고 `research_run=45020115701` 사용.
+- 25개 공급 후보 × 네이버/쿠팡 조사 행 50개의 **상품명 기반 카테고리 일치 여부만** 간단히 점검합니다.
+- `keyword_supported_not_verified`는 상품명에 해당 카테고리의 단어가 존재한다는 뜻일 뿐 정확한 분류를 검증했다는 뜻이 아닙니다.
+- `possible_category_mismatch` 및 `category_not_verifiable_from_title`는 사람의 재검토 대상입니다.
+- 이 단계는 법적 판매 가능성, 동일 모델/옵션 매칭, 시장 가격, 판매량, 마진을 증명하지 않습니다.
+- 이미 실행한 원본 데이터의 샘플 오분류 사례: '반려동물'에 '핸드폰 미니백' 포함.

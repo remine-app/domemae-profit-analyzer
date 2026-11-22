@@ -1,0 +1,38 @@
+name: Audit market research queue
+on:
+  workflow_dispatch:
+    inputs:
+      research_run:
+        description: "Completed Prepare no-account market research queue run ID"
+        required: true
+        default: "45020115701"
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Offline tests
+        run: python -m unittest discover -s tests -v
+      - name: Download market queue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.research_run }}
+        run: |
+          mkdir -p input
+          gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" -n no-account-market-research -D input
+      - name: Audit category quality
+        run: python audit_market_queue.py --input input/market_research_queue.csv
+      - name: Upload audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-queue-audit
+          path: output/audit/
+          retention-days: 3
