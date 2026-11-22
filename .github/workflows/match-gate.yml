@@ -28,7 +28,7 @@ jobs:
       - name: Download authorized Domemae API dataset
         env:
           GH_TOKEN: ${{ github.token }}
-          SOURCE_RUN: ${{ inputs.discovery_run }}
+          SOURCE_RUN: ${{ inputs.discovery_run || '45018028549' }}
         run: |
           set -euo pipefail
           mkdir -p input
