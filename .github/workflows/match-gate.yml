@@ -1,5 +1,9 @@
 name: Offline supplier-market matching gate
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/match-gate-20261122.txt'
   workflow_dispatch:
     inputs:
       discovery_run:
