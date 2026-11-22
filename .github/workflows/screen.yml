@@ -1,0 +1,46 @@
+name: Screen latest supplier data
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: "Previously completed Broad product discovery run ID"
+        required: true
+        default: "45018028549"
+        type: string
+      shortlist:
+        description: "Market research queue size (1-500)"
+        required: true
+        default: "80"
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Download previous data artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.source_run }}
+        run: |
+          mkdir input
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" -n domemae-discovery -D input
+      - name: Apply offline risk screening
+        env:
+          SHORTLIST: ${{ inputs.shortlist }}
+        run: |
+          python -m unittest discover -s tests -v
+          python screen.py --catalog "$(find input -maxdepth 2 -name 'catalog_*.csv' | head -1)" --details "$(find input -maxdepth 2 -name 'detail_candidates_*.csv' | head -1)" --shortlist "$SHORTLIST"
+      - name: Upload review tables
+        uses: actions/upload-artifact@v4
+        with:
+          name: supplier-screening
+          path: output/
+          retention-days: 3
+          if-no-files-found: error
