@@ -16,3 +16,12 @@ class PilotAuditTests(unittest.TestCase):
   r=audit([item],{'reports':[]})[0]
   self.assertEqual(r['indicative_room_before_fees'],'')
   self.assertNotEqual(r['manual_priority'],'PRICE_CHECK_FIRST')
+
+ def test_actual_supplier_category_overrides_keyword_group(self):
+  item={'no':'3','hypothesis_group':'생활/청소','actual_category':'트렁크정리함','title':'트렁크 수납함',
+        'supply_price_1':'14000','shipping_fee':'3000','shipping_type':'고정배송비','native_min':'21000'}
+  naver={'reports':[{'status':'ok','data':[{'keyword_group':'청소','relative_click_index':40}]}]}
+  r=audit([item],naver)[0]
+  self.assertEqual(r['naver_keyword'],'')
+  self.assertEqual(r['naver_trend_points'],0)
+  self.assertIn('actual_category_vehicle_not_covered',r['review_reasons'])

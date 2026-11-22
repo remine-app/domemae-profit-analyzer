@@ -12,6 +12,15 @@ FIELDS=["no","hypothesis_group","actual_category","title","url","detail_status",
         "naver_trend_points","demand_evidence_grade","return_shipping_fee",
         "supplier_reviews","seller_satisfaction","manual_priority","review_reasons"]
 KEYWORD_MAP={"수납":"수납함","생활/욕실":"욕실","생활/청소":"청소","생활/세탁":"세탁"}
+def demand_link(group,actual_category):
+    """Title-search group is never authoritative over an obviously different supplier category."""
+    category=str(actual_category or "")
+    if any(k in category for k in ("트렁크","차량","자동차","세차")):
+        return ("","actual_category_vehicle_not_covered")
+    if any(k in category for k in ("주방수건","행주","조리도구")):
+        return ("","actual_category_kitchen_not_covered")
+    return (KEYWORD_MAP.get(group,""),"keyword_proxy_not_sku_demand")
+
 
 def intval(v):
     try:return int(str(v).strip().replace(",",""))
@@ -27,7 +36,7 @@ def audit(rows,naver):
     result=[]
     for item in rows:
         group=item.get("hypothesis_group","")
-        key=KEYWORD_MAP.get(group,"")
+        key,category_link=demand_link(group,item.get("actual_category",""))
         supply=intval(item.get("supply_price_1"))
         freight=intval(item.get("shipping_fee"))
         external=intval(item.get("native_min"))
@@ -37,11 +46,12 @@ def audit(rows,naver):
         elif room<=0:reasons.append("nonpositive_indicative_room")
         elif room<3000:reasons.append("thin_indicative_room_before_fees")
         if item.get("shipping_type")!="고정배송비":reasons.append("non_fixed_shipping")
-        if not item.get("seller_satisfaction"):reasons.append("seller_satisfaction_unavailable")
+        if not item.get("seller_satisfaction"):reasons.append("seller_satisfaction_unavailable_or_parser_review")
         if not item.get("model"):reasons.append("exact_model_missing")
         if not item.get("certification_flag"):reasons.append("certification_unverified")
         if not item.get("return_shipping_fee"):reasons.append("return_cost_missing")
-        if len(trends.get(key,[]))<8:reasons.append("weak_naver_series")
+        if category_link!="keyword_proxy_not_sku_demand":reasons.append(category_link)
+        if len(trends.get(key,[]))<8:reasons.append("weak_or_missing_naver_series")
         reasons+=["current_same_option_retail_price_missing","platform_fees_and_returns_unverified"]
         priority=("PRICE_CHECK_FIRST" if room is not None and room>=3000 and item.get("shipping_type")=="고정배송비"
                   else "LOW_PRICE_ROOM" if room is not None and room<=0
