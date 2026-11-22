@@ -1,0 +1,32 @@
+name: One-time NAVER 2-category trend pilot
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'config/naver-pilot-20261122.txt'
+permissions:
+  contents: read
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Offline tests
+        run: python -m unittest discover -s tests -v
+      - name: Two category requests maximum
+        env:
+          NAVER_API_HUB_CLIENT_ID: ${{ secrets.NAVER_API_HUB_CLIENT_ID }}
+          NAVER_API_HUB_CLIENT_SECRET: ${{ secrets.NAVER_API_HUB_CLIENT_SECRET }}
+        run: python naver_pilot.py
+      - name: Upload quality-check results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: naver-demand-pilot
+          path: output/naver_pilot/
+          retention-days: 3
+          if-no-files-found: ignore
